@@ -46,3 +46,7 @@ width=300 height=400
 + require('images/a.gif') + ' 3x'" 
 sizes="(min-width:520px) 500px, 100%" alt="" />
 ```
+### notices
+the calculation of size is not According to the `<img>`'s srcset, but src, because that we don't know which one of image specificed is expected as the calculation image.So, if your `<img>` contains srcset, please point out one of them as src's value.\
+In addition, once handled by images-size-loader, an special class named `_images-size-loader-loading` will be add on `<img>` , and when the `<img>`'s src loaded, it will be removed.\
+Now, the class `_images-size-loader-loading` will only show a loading image, and it can be customized according to you.
