@@ -46,9 +46,13 @@ function addClass(str, className) {
 }
 
 function addStyle(str, style) {
-	return str.replace(
-		/(\<style [^\>]*\>)([\s\S]*)(\<\/style\>)/,
-		`$1$2${style}$3`
+	return (
+		str +
+		`
+		<style>
+			${style}
+		</style>
+		`
 	);
 }
 
