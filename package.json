@@ -1,9 +1,14 @@
 {
 	"name": "images-size-loader",
-	"version": "0.0.2",
+	"version": "0.1.1",
 	"description":
 		"an webpack loader for vue.js  which can add the width and height to <img>",
 	"main": "index.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/overarchingSky/images-size-loader"
+	},
+	"license": "MIT",
 	"scripts": {
 		"test": "test"
 	},
@@ -18,7 +23,6 @@
 		"<img>"
 	],
 	"author": "overarchingSky",
-	"license": "ISC",
 	"devDependencies": {
 		"chalk": "^2.3.0",
 		"image-size": "^0.6.2"
