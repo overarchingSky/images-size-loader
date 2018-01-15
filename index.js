@@ -6,14 +6,12 @@ var url = require("url");
 var http = require("http");
 
 function isNeedHandle(str) {
-	//如果img标签上已经存在widht或height中的一个属性（意味着编码人员意图自己控制该图片），或者无正确的src属性值，则不添加宽高
-	return !/\s[width,height]=/.test(str) && /src=\"[^\"]*\.[^\"]*\"/.test(str);
+	//如果img标签上已经存在widht或height中的一个属性（意味着编码人员意图自己控制该图片），或者无正确的src属性值，则跳过，不予处理
+	return !/\s(width|height)=/.test(str) && /src=\"[^\"]*\.[^\"]*\"/.test(str);
 }
 
 function getHttpImage(httpUrl, callback) {
-	console.log(chalk.red(httpUrl));
 	var options = url.parse(httpUrl);
-
 	http.get(options, function(response) {
 		var chunks = [];
 		response
@@ -22,7 +20,6 @@ function getHttpImage(httpUrl, callback) {
 			})
 			.on("end", function() {
 				var buffer = Buffer.concat(chunks);
-				console.log(chalk.red(JSON.stringify(buffer)));
 				callback && callback(buffer);
 			});
 	});
@@ -46,12 +43,11 @@ function getImageSourcePath(imgStr, callback) {
 				)
 				.trim()
 		: null;
-
 	this.resolve(this.context, sourcePath, (a, path, info) => {
 		callback && callback(path);
 	});
 }
-//WebpackFileManager
+
 function addSize(str, width, height) {
 	return str.replace(/\<img/, `<img width="${width}" height="${height}"`);
 }
@@ -87,9 +83,6 @@ module.exports = function(source) {
 	}
 	let _this = this;
 	let imageStrs = source.match(/\<img[^>]*\>/g) || [];
-	if (imageStrs.length == 0) {
-		return source;
-	}
 	imageStrs = imageStrs.filter(imageStr => {
 		return isNeedHandle(imageStr);
 	});
@@ -122,12 +115,10 @@ module.exports = function(source) {
 			return allTaskSuccess;
 		}
 	};
-	console.log("adding image size...");
-	//建立任务
+	//建立任务 create task
 	imageStrs.forEach(imageStr => {
 		taskMamager.create(imageStr, function() {
 			getImageSourcePath.call(_this, imageStr, path => {
-				console.log("+++++++++++me", path);
 				let { width, height } = sizeOf(path); //读取图片，返回图片信息
 				taskMamager.task[imageStr].success(
 					addClass(
@@ -135,7 +126,6 @@ module.exports = function(source) {
 						"_images-size-loader-loading"
 					),
 					function() {
-						//console.log("precent...");
 						if (taskMamager.checkAllTaskSuccess()) {
 							source = addStyle(
 								source.replace(
