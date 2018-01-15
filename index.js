@@ -1,8 +1,6 @@
 "use strict";
 var chalk = require("chalk");
 var sizeOf = require("image-size");
-var path = require("path");
-var sprite = require("./sprite");
 var style = require("./style");
 
 function isNeedHandle(str) {
@@ -13,12 +11,7 @@ function isNeedHandle(str) {
 function getImageSourcePath(imgStr, callback) {
 	let sourcePath = imgStr.match(/src="([^"]*)"/);
 	if (!/require/.test(sourcePath)) {
-		return (
-			callback &&
-			callback(
-				path.join(path.resolve(__dirname, "../../"), sourcePath[1])
-			)
-		);
+		return callback && callback(process.cwd() + sourcePath[1]);
 	}
 	sourcePath = sourcePath
 		? sourcePath[1]
@@ -105,6 +98,7 @@ module.exports = function(source) {
 	imageStrs.forEach(imageStr => {
 		taskMamager.create(imageStr, function() {
 			getImageSourcePath.call(_this, imageStr, path => {
+				console.log("+++++++++++me", path);
 				let { width, height } = sizeOf(path); //读取图片，返回图片信息
 				taskMamager.task[imageStr].success(
 					addClass(
