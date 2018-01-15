@@ -2,15 +2,40 @@
 var chalk = require("chalk");
 var sizeOf = require("image-size");
 var style = require("./style");
+var url = require("url");
+var http = require("http");
 
 function isNeedHandle(str) {
 	//如果img标签上已经存在widht或height中的一个属性（意味着编码人员意图自己控制该图片），或者无正确的src属性值，则不添加宽高
 	return !/\s[width,height]=/.test(str) && /src=\"[^\"]*\.[^\"]*\"/.test(str);
 }
 
+function getHttpImage(httpUrl, callback) {
+	console.log(chalk.red(httpUrl));
+	var options = url.parse(httpUrl);
+
+	http.get(options, function(response) {
+		var chunks = [];
+		response
+			.on("data", function(chunk) {
+				chunks.push(chunk);
+			})
+			.on("end", function() {
+				var buffer = Buffer.concat(chunks);
+				console.log(chalk.red(JSON.stringify(buffer)));
+				callback && callback(buffer);
+			});
+	});
+}
+
 function getImageSourcePath(imgStr, callback) {
 	let sourcePath = imgStr.match(/src="([^"]*)"/);
-	if (!/require/.test(sourcePath)) {
+	if (/(http(s)?:)?\/\//.test(sourcePath)) {
+		//if cdn or http(s)://***
+		return getHttpImage(sourcePath[1], function(image) {
+			callback && callback(image);
+		});
+	} else if (!/require/.test(sourcePath)) {
 		return callback && callback(process.cwd() + sourcePath[1]);
 	}
 	sourcePath = sourcePath
