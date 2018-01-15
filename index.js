@@ -4,6 +4,7 @@ var sizeOf = require("image-size");
 var style = require("./style");
 var url = require("url");
 var http = require("http");
+var path = require('path')
 
 function isNeedHandle(str) {
 	//如果img标签上已经存在widht或height中的一个属性（意味着编码人员意图自己控制该图片），或者无正确的src属性值，则跳过，不予处理
@@ -25,26 +26,45 @@ function getHttpImage(httpUrl, callback) {
 	});
 }
 
+function isRelativePath(path){
+	return /^\.{1,2}\//.test(path)
+}
+
 function getImageSourcePath(imgStr, callback) {
+	if(!callback){
+		throw `callback must be defined`
+	}
 	let sourcePath = imgStr.match(/src="([^"]*)"/);
+	if(!sourcePath || !sourcePath[1]){
+		return callback(null);
+	}
+	sourcePath = sourcePath[1]
 	if (/(http(s)?:)?\/\//.test(sourcePath)) {
 		//if cdn or http(s)://***
-		return getHttpImage(sourcePath[1], function(image) {
-			callback && callback(image);
+		return getHttpImage(sourcePath, function(image) {
+			callback(image);
 		});
-	} else if (!/require/.test(sourcePath)) {
-		return callback && callback(process.cwd() + sourcePath[1]);
 	}
+	else if (!/require/.test(sourcePath)) {
+		if(isRelativePath(sourcePath)){
+			return callback(path.resolve(this.resourcePath, '../',sourcePath));
+		}
+		return callback(process.cwd() + sourcePath);
+	}
+	//从require('***.png')中取出路径部分
 	sourcePath = sourcePath
-		? sourcePath[1]
+		? sourcePath
 				.replace(
 					/require\(["']([^\",^\(,^\)]*\.[^\",^\(,^\)]*)["']\)/g,
 					"$1"
 				)
 				.trim()
 		: null;
+	if(isRelativePath(sourcePath)){
+		sourcePath = path.resolve(this.resourcePath, '../', sourcePath)
+	}
 	this.resolve(this.context, sourcePath, (a, path, info) => {
-		callback && callback(path);
+		callback(path);
 	});
 }
 
@@ -119,6 +139,13 @@ module.exports = function(source) {
 	imageStrs.forEach(imageStr => {
 		taskMamager.create(imageStr, function() {
 			getImageSourcePath.call(_this, imageStr, path => {
+				if(!path){
+					console.log(chalk.red(`
+						failed to resolve the image path:\n
+						in ${imageStr}
+					`))
+					throw `at ${this.resourcePath}`
+				}
 				let { width, height } = sizeOf(path); //读取图片，返回图片信息
 				taskMamager.task[imageStr].success(
 					addClass(
