@@ -122,11 +122,10 @@ module.exports = function(source) {
 	let _this = this;
 	var next = _this.async();
 	let imageStrs = source.match(/\<img[^>]*\>/g) || [];
+	imageStrs = imageStrs.filter(item => isNeedHandle(item));
 	if (imageStrs.length == 0) {
 		next(null, source);
-		//return source;
 	}
-
 	let taskMamager = {
 		task: {},
 		create: function(name, callback) {
@@ -195,7 +194,6 @@ module.exports = function(source) {
 						),
 						_ => {
 							source = source.replace(/\<img[^>]*\>/g, img => {
-								console.log();
 								if (generateKey(img, index) == key) {
 									return isNeedHandle(img)
 										? taskMamager.task[key].payload
