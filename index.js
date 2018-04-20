@@ -7,8 +7,19 @@ var http = require("http");
 var path = require("path");
 
 function isNeedHandle(str) {
-	//如果img标签上已经存在widht或height中的一个属性（意味着编码人员意图自己控制该图片），或者无正确的src属性值，则跳过，不予处理
-	return !/\s(width|height)=/.test(str) && /src=\"[^\"]*\.[^\"]*\"/.test(str);
+	//满足一下两个条件才予以处理
+	//1.img标签必须存在loading或size-loading属性之一，
+	//2.没有设置widht或height中的任何一个属性
+	//3.src有值
+	return (
+		/loading/.test(str) &&
+		!/\s(width|height)=/.test(str) &&
+		/src=\"[^\"]*\.[^\"]*\"/.test(str)
+	);
+}
+
+function onlyAddLoading(str) {
+	return /loading/.test(str) && !/size-loading/.test(str);
 }
 
 function getHttpImage(httpUrl, callback) {
@@ -85,6 +96,14 @@ function addClass(str, className) {
 	}
 }
 
+function getSrc(str) {
+	return str.match(/src=\"([^\s]*)\"/)[1];
+}
+
+function generateKey(str, random) {
+	return getSrc(str) + "_" + random;
+}
+
 function addStyle(str, style) {
 	return (
 		str +
@@ -101,14 +120,13 @@ module.exports = function(source) {
 		this.cacheable();
 	}
 	let _this = this;
-	let imageStrs = source.match(/\<img[^>]*\>/g) || [];
-	imageStrs = imageStrs.filter(imageStr => {
-		return isNeedHandle(imageStr);
-	});
-	if (imageStrs.length == 0) {
-		return source;
-	}
 	var next = _this.async();
+	let imageStrs = source.match(/\<img[^>]*\>/g) || [];
+	if (imageStrs.length == 0) {
+		next(null, source);
+		//return source;
+	}
+
 	let taskMamager = {
 		task: {},
 		create: function(name, callback) {
@@ -135,38 +153,64 @@ module.exports = function(source) {
 		}
 	};
 	//建立任务 create task
-	imageStrs.forEach(imageStr => {
-		taskMamager.create(imageStr, function() {
-			getImageSourcePath.call(_this, imageStr, path => {
-				if (!path) {
-					console.log(
-						chalk.red(`
-						failed to resolve the image path:\n
-						in ${imageStr}\n
-						to make sure that the images exist!
-					`)
-					);
-				}
-				let { width, height } = sizeOf(path); //读取图片，返回图片信息
-				taskMamager.task[imageStr].success(
-					addClass(
-						addSize(imageStr, width, height),
-						"_images-size-loader-loading"
-					),
-					function() {
+	imageStrs.forEach((imageStr, index) => {
+		var key = generateKey(imageStr, index);
+		taskMamager.create(key, _ => {
+			if (onlyAddLoading(imageStr)) {
+				//只添加loading
+				taskMamager.task[key].success(
+					addClass(imageStr, "_images-size-loader-loading"),
+					_ => {
+						source = source.replace(/\<img[^>]*\>/g, img => {
+							if (generateKey(img, index) == key) {
+								return isNeedHandle(img)
+									? taskMamager.task[key].payload
+									: img;
+							}
+							return img;
+						});
 						if (taskMamager.checkAllTaskSuccess()) {
-							source = addStyle(
-								source.replace(
-									/\<img[^>]*\>/g,
-									img => taskMamager.task[img].payload
-								),
-								style
-							);
+							source = addStyle(source, style);
 							next(null, source);
 						}
 					}
 				);
-			});
+			} else {
+				//添加loading和宽高属性
+				getImageSourcePath.call(_this, imageStr, path => {
+					if (!path) {
+						console.log(
+							chalk.red(`
+							failed to resolve the image path:\n
+							in ${imageStr}\n
+							to make sure that the images exist!
+						`)
+						);
+					}
+					let { width, height } = sizeOf(path); //读取图片，返回图片信息
+					taskMamager.task[key].success(
+						addClass(
+							addSize(imageStr, width, height),
+							"_images-size-loader-loading"
+						),
+						_ => {
+							source = source.replace(/\<img[^>]*\>/g, img => {
+								console.log();
+								if (generateKey(img, index) == key) {
+									return isNeedHandle(img)
+										? taskMamager.task[key].payload
+										: img;
+								}
+								return img;
+							});
+							if (taskMamager.checkAllTaskSuccess()) {
+								source = addStyle(source, style);
+								next(null, source);
+							}
+						}
+					);
+				});
+			}
 		});
 	});
 };
