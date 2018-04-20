@@ -26,13 +26,13 @@ module: {
           ]
         },
         ...
-```
 
 html:
 
 添加 loading 属性，开启 loading 加载动画：<img loading src="****.png" />
 
 添加 size-loading 属性，开启 loading 加载动画并自动读取图片尺寸：<img size-loading src="****.png" />
+```
 
 ### example
 
