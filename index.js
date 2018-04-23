@@ -100,6 +100,21 @@ function getSrc(str) {
 	return str.match(/src=\"([^\s]*)\"/)[1];
 }
 
+function matchImg(str) {
+	let shat = str.split(/(-->)|(<!--)/);
+
+	for (let i = 0; i < shat.length; i++) {
+		const item = shat[i];
+		if (item == "<!--") {
+			shat[i] = "";
+			shat[i + 1] = "";
+			shat[i + 2] = "";
+		}
+	}
+	return shat.join("").match(/\<img[^>]*\>/g) || [];
+	//return str.replace(/\<\!--.*--\>/, "").match(/\<img[^>]*\>/g) || [];
+}
+
 function generateKey(str, random) {
 	return getSrc(str) + "_" + random;
 }
@@ -121,19 +136,14 @@ module.exports = function(source) {
 	}
 	let _this = this;
 	var next = _this.async();
-	let imageStrs = source.match(/\<img[^>]*\>/g) || [];
+
+	let imageStrs = matchImg(source); // source.match(/\<img[^>]*\>/g) || [];
 	imageStrs = imageStrs.filter(item => isNeedHandle(item));
 	if (imageStrs.length == 0) {
 		next(null, source);
 	}
 	let taskMamager = {
 		task: {},
-		start: function() {
-			this.cbs.forEach(cb => {
-				cb();
-			});
-		},
-		cbs: [],
 		create: function(name, callback) {
 			this.task[name] = {
 				status: "ready",
@@ -144,8 +154,7 @@ module.exports = function(source) {
 					callback && callback();
 				}
 			};
-			callback && this.cbs.push(callback);
-			//callback && callback();
+			callback && callback();
 		},
 		checkAllTaskSuccess: function() {
 			let allTaskSuccess = true;
@@ -161,7 +170,6 @@ module.exports = function(source) {
 	//建立任务 create task
 	imageStrs.forEach((imageStr, index) => {
 		var key = generateKey(imageStr, index);
-		console.log("key", key);
 		taskMamager.create(key, _ => {
 			if (onlyAddLoading(imageStr)) {
 				//只添加loading
@@ -219,5 +227,4 @@ module.exports = function(source) {
 			}
 		});
 	});
-	taskMamager.start();
 };
