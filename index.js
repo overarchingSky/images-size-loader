@@ -128,6 +128,12 @@ module.exports = function(source) {
 	}
 	let taskMamager = {
 		task: {},
+		start: function() {
+			this.cbs.forEach(cb => {
+				cb();
+			});
+		},
+		cbs: [],
 		create: function(name, callback) {
 			this.task[name] = {
 				status: "ready",
@@ -138,7 +144,8 @@ module.exports = function(source) {
 					callback && callback();
 				}
 			};
-			callback && callback();
+			callback && this.cbs.push(callback);
+			//callback && callback();
 		},
 		checkAllTaskSuccess: function() {
 			let allTaskSuccess = true;
@@ -154,6 +161,7 @@ module.exports = function(source) {
 	//建立任务 create task
 	imageStrs.forEach((imageStr, index) => {
 		var key = generateKey(imageStr, index);
+		console.log("key", key);
 		taskMamager.create(key, _ => {
 			if (onlyAddLoading(imageStr)) {
 				//只添加loading
@@ -211,4 +219,5 @@ module.exports = function(source) {
 			}
 		});
 	});
+	taskMamager.start();
 };
