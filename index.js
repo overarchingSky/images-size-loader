@@ -97,7 +97,7 @@ function addClass(str, className) {
 }
 
 function getSrc(str) {
-	return str.match(/src=\"([^\s]*)\"/)[1];
+	return str.match(/src=\"([^\"]*)\"/)[1];
 }
 
 function matchImg(str) {
